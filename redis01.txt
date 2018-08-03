@@ -1,0 +1,172 @@
+RDBMS
+生产环境下与网站与mysql 一起使用：使LNMP支持redis服务
+
+
+服务配置  IP 地址 端口  数据库位置  数据库个数  内存清除  设置密码
+管理的常用命令：。。。。。。。
+
+
+mysql，DB2，Oralce   为关系数据库管理系统：
+nosql               范指非关系型数据库        
+*****************************************************
+— 非关系型数据库----支持部分sql查询---部分不够强，但
+– 不需要预先定义数据存储结构
+– 表的每条记录都可以有不同的类型和结构
+
+主流软件
+– Redis
+– MongoDB
+– Memcached
+– CouchDB
+– Neo4j
+– FlockDB
+****************************************************
+
+Redis
+– Remode DIctionary Server( 远程字典服务器 )
+– 使用 C 语言编写的,遵守 BSD 的开源软件
+– 是一款高性能的 (Key/Values) 分布式内存数据库 《《
+– 并支持数据持久化的 NoSQL 数据库服务软件
+访问------>内存-------->定期写入硬盘
+
+Redis 特点:
+– 支持数据持久化,可以把内存里数据保存到硬盘中
+– 不仅仅支持 key/values 类型的数据,同时还支持 list
+hash set zset 类型
+– 支持 master-salve 模式数据备份
+
+配置redis
+1.装包确保有gcc gcc-c++环境
+2.make && make install
+3.初始化配置---(可使用脚本/root/redis-4.0.8/utils/install_server.sh)一路回车
+4.查看状态
+/etc/init.d/redis_6379 status
+Redis is running (10449)
+
+ss -unltp | grep :6379
+
+ps -C redis-server
+###############################################################
+
+进入redis命令界面
+redis-cli ----mysql
+>select 1
+127.0.0.1:6379[1]> ------进入一个1库中（默认一共有16个库）
+
+– Set keyname keyvalue // 存储
+– get keyname // 获取
+– Select 数据库编号 0-15 // 切换库
+– Keys * // 打印所以变量
+– Keys a? // 打印指定变量
+– Exist keyname // 测试是否存在
+– ttl keyname // 查看生存时间
+– type keyname // 查看类型
+--save  //马上保存
+
+默认都是字符类型：
+move key 1(移动到库名）
+
+
+默认存储地点
+ls /var/lib/redis/6379/
+###############################################
+
+lnmp+redis
+装包：lnmp----->php-radis----->支持redis
+配置 php 支持 Redis
+• 安装 php 扩展
+
+#yum -y install autoconf
+#yum -y install automake
+#rpm -ivh php-devel-5.4.16-42.el7.x86_64.rpm
+# tar -zxf php-redis-2.2.4.tar.gz
+# cd phpredis-2.2.4/
+
+
+[root@bogon phpredis-2.2.4]# /usr/bin/phpize
+Configuring for:
+PHP Api Version:
+20100412
+Zend Module Api No:
+20100525
+Zend Extension Api No: 220100525
+
+
+
+# ./configure --with-php-config=/usr/bin/php-config
+
+[root@bogon phpredis-2.2.4]# make
+[root@bogon phpredis-2.2.4]# make install
+Installing shared extensions:     /usr/lib64/php/modules/
+
+vim /etc/php.ini
+:728行    extension_dir = "/usr/lib64/php/modules/"
+：730行   extension = "redis.so"
+
+##############################################################
+
+Redis修改端口与IP地址
+vim /etc/redis/6379.conf 
+70行 :bind 192.168.4.50
+93行:port 6350
+----------------------------------
+/etc/init.d/redis_6379 stop -----------停止服务在重启
+查看
+
+ss -unltp | grep :6350
+redis-cli -h 192.168.4.50 -p6350       ------再次访问新的端口
+redis-cli -h 192.168.4.50 -p6350 shutdown----修改后的停止服务
+
+
+修改密码：/etc/
+vim /etc/redis/6379.conf---------->redis配置文件
+第501行改密码
+[root@50 redis]# redis-cli -h 192.168.4.50 -p 6350 
+192.168.4.50:6350> auth 123456---设置密码才可更改
+
+
+vim /etc/init.d/redis_6379 ------->redis运行脚本。进入可修改脚本 更改端口和访问地址，密码等默认设置
+
+/etc/init.d/redis_6379 stop
+
+##############################################################
+配置类型：
+----------------------------------------------------------------------------------------------
+常用配置选项
+– port 6379 // 端口
+– bind 127.0.0.1 //IP 地址
+– tcp-backlog 511 //tcp 连接总数
+– timeout 0 // 连接超时时间
+– tcp-keepalive 300 // 长连接时间
+– daemonize yes // 守护进程方式运行
+– databases 16 // 数据库个数
+– logfile /var/log/redis_6379.log //pid 文件
+– maxclients 10000 // 并发连接数量
+– dir /var/lib/redis/6379 // 数据库目录
+
+
+****************************************************************
+内存管理：
+内存清除策略
+– volatile-lru 最近最少使用 (针对设置了过期时间的 ke
+y )
+
+– allkeys-lru 删除最少使用的 key
+– volatile-random 在设置了过期的 key 里随机移除
+– allkeys-random 随机移除 key
+– volatile-ttl (minor TTL) 移除最近过期的 key
+– noeviction
+不删除 写满时报错------（默认设置）
+----------------------------------------------------------------------------------------
+选项默认设置
+– maxmemory <bytes> // 最大内存
+– maxmemory-policy noeviction // 定义使用的策略
+– maxmemory-samples 5 // 选取模板数据的个数
+(针对 lru 和 ttl 策略)
+
+
+
+
+
+
+
